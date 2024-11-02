@@ -2,14 +2,16 @@ package encryption
 
 import (
 	"crypto/aes"
-	"encoding/binary"
 	"errors"
 )
 
-func Decrypt(ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) == 0 || len(ciphertext)%16 != 0 {
+func Decrypt(ci Bytes) ([]byte, error) {
+	if len(ci) == 0 || len(ci)%16 != 0 {
 		return nil, errors.New("length of ciphertext must be a multiple of 16")
 	}
+
+	ciphertext := make([]byte, len(ci))
+	copy(ciphertext, ci)
 
 	cipher, err := aes.NewCipher(Configuration.Key)
 	if err != nil {
@@ -17,16 +19,19 @@ func Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	plaintext := make([]byte, 0)
-	vector := binary.BigEndian.Uint16(Configuration.Iv)
+	vector := Configuration.Iv
 	for i := 0; i < len(ciphertext); i += 16 {
-		block := binary.BigEndian.Uint16(ciphertext[i : i+16])
-		b := make([]byte, 16)
-		binary.BigEndian.PutUint16(b, block^vector)
+		block := ciphertext[i : i+16]
 
-		c := make([]byte, 16)
-		cipher.Encrypt(c, b)
-		plaintext = append(plaintext, c...)
-		vector = binary.BigEndian.Uint16(c)
+		p := make(Bytes, 16)
+		cipher.Decrypt(p, block)
+
+		err = p.Xor(vector)
+		if err != nil {
+			return nil, err
+		}
+		plaintext = append(plaintext, p...)
+		vector = block
 	}
 
 	return plaintext, nil

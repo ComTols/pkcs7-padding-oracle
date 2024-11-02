@@ -4,14 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 )
 
 type Config struct {
-	Key []byte `json:"key"`
-	Iv  []byte `json:"iv"`
+	Key Bytes `json:"key"`
+	Iv  Bytes `json:"iv"`
 }
 
 var Configuration *Config
@@ -122,5 +123,20 @@ func createConfigFile() (*Config, error) {
 		return nil, err
 	}
 
+	fmt.Println("Configuration written")
+
 	return &conf, nil
+}
+
+type Bytes []byte
+
+func (data Bytes) Xor(xor []byte) error {
+	if len(xor) != len(data) {
+		return errors.New("xor length mismatch")
+	}
+
+	for i := 0; i < len(xor); i++ {
+		data[i] ^= xor[i]
+	}
+	return nil
 }

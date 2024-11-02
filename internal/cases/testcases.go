@@ -70,10 +70,16 @@ func ProvideTestcases() error {
 		return err
 	}
 
-	file, err := os.OpenFile("test/padding-oracle-test.json", os.O_RDONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile("test/padding-oracle-test.json", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Println("Error closing file:", err)
+		}
+	}(file)
 
 	_, err = file.Write(marshal)
 	if err != nil {
