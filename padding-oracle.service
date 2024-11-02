@@ -1,0 +1,15 @@
+[Unit]
+Description=PKCS#7 Padding Oracle
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/padding-oracle
+Restart=always
+User=padding-oracle
+Group=padding-oracle
+WorkingDirectory=/etc/padding-oracle
+StandardOutput=file:/var/log/padding-oracle/output.log
+StandardError=file:/var/log/padding-oracle/error.log
+
+[Install]
+WantedBy=multi-user.target
