@@ -13,7 +13,7 @@ type EnvironmentVar[T any] struct {
 var (
 	Host = EnvironmentVar[string]{
 		name:     "hostname",
-		fallback: "localhost",
+		fallback: "127.0.0.1",
 	}
 	Port = EnvironmentVar[int]{
 		name:     "port",
