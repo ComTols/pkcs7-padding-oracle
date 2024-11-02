@@ -30,8 +30,8 @@ func main() {
 	}(logFile)
 
 	// Umleitung von stdout und stderr auf die Logdatei
-	//os.Stdout = logFile
-	//os.Stderr = logFile
+	os.Stdout = logFile
+	os.Stderr = logFile
 
 	err = encryption.Load()
 	if err != nil {
