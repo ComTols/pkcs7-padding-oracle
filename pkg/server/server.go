@@ -30,6 +30,7 @@ func (server *Server) Run() {
 			fmt.Println("Error closing listener:", err)
 		}
 	}(listener)
+	fmt.Printf("Server listing to %s:%d\n", server.Host, server.Port)
 
 	for {
 		conn, err := listener.Accept()
@@ -37,6 +38,7 @@ func (server *Server) Run() {
 			log.Println(err)
 			continue
 		}
+		fmt.Printf("Connection accepted from %s\n", conn.RemoteAddr().String())
 
 		client := &Client{
 			conn: conn,
@@ -59,6 +61,7 @@ func (client *Client) handleRequest() {
 		fmt.Println("Error setting read deadline:", err.Error())
 		return
 	}
+	fmt.Printf("This connection will be open till %s\n", time.Now().Add(10*time.Second).String())
 
 	initialCipherBlock := make([]byte, 16)
 	err = client.read(initialCipherBlock)
@@ -66,20 +69,21 @@ func (client *Client) handleRequest() {
 		fmt.Println("Error reading initial block:", err.Error())
 		return
 	}
+	fmt.Printf("Set ciphertext to %0x\n", initialCipherBlock)
 
 	for {
+		fmt.Println("next round")
 		length := make([]byte, 2)
 		err = client.read(length)
 		if err != nil {
 			fmt.Println("Error reading length block:", err.Error())
 			return
 		}
-		fmt.Println(length)
 		blockCount := binary.LittleEndian.Uint16(length)
-		fmt.Println("Block count:", blockCount)
+		fmt.Printf("Reading %d following blocks...\n", blockCount)
 
-		if blockCount > 1400 {
-			fmt.Println("Block count too big: max 1400 blocks allowed")
+		if blockCount > 256 {
+			fmt.Println("Block count too big: max 256 blocks allowed")
 			return
 		}
 
@@ -94,7 +98,9 @@ func (client *Client) handleRequest() {
 			blocksToTest[i] = block
 		}
 
+		fmt.Println("------------ Blocks ------------")
 		responses := make([]byte, blockCount)
+		correctBlocks := 0
 		for i := 0; i < int(blockCount); i++ {
 			plaintext, err := encryption.Decrypt(append(blocksToTest[i], initialCipherBlock...))
 			if err != nil {
@@ -103,12 +109,17 @@ func (client *Client) handleRequest() {
 			}
 			if checkPadding(plaintext) {
 				responses[i] = 0x01
-				fmt.Println("Gefunden:", plaintext)
+				correctBlocks++
+				fmt.Printf("  -> found correct padding at block %03d: %0x\n", i, plaintext)
+			}
+			if i%100 == 0 {
+				fmt.Printf("  eg. %03d. block: %0x\n", i, plaintext)
 			}
 		}
+		fmt.Println("------------  End   ------------")
 
-		fmt.Println(len(responses), responses)
-		//client.flush()
+		fmt.Printf("Found %d blocks with correct padding\n", correctBlocks)
+
 		_, err = client.conn.Write(responses)
 		if err != nil {
 			fmt.Println("Error sending response:", err.Error())
@@ -140,6 +151,5 @@ func checkPadding(plaintext []byte) bool {
 			return false
 		}
 	}
-	fmt.Println(plaintext)
 	return true
 }
