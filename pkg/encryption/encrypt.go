@@ -5,20 +5,20 @@ import (
 	"errors"
 )
 
-func Encrypt(plain []byte) ([]byte, error) {
+func Encrypt(plain, key, iv []byte) ([]byte, error) {
 	if len(plain) == 0 || len(plain)%16 != 0 {
 		return nil, errors.New("length of plaintext must be a multiple of 16")
 	}
 	plaintext := make([]byte, len(plain))
 	copy(plaintext, plain)
 
-	cipher, err := aes.NewCipher(Configuration.Key)
+	cipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
 	ciphertext := make([]byte, 0)
-	vector := Configuration.Iv
+	vector := iv
 	for i := 0; i < len(plaintext); i += 16 {
 		block := Bytes(plaintext[i : i+16])
 

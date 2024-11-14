@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func Decrypt(ci Bytes) ([]byte, error) {
+func Decrypt(ci, key, iv Bytes) ([]byte, error) {
 	if len(ci) == 0 || len(ci)%16 != 0 {
 		return nil, errors.New("length of ciphertext must be a multiple of 16")
 	}
@@ -13,13 +13,13 @@ func Decrypt(ci Bytes) ([]byte, error) {
 	ciphertext := make([]byte, len(ci))
 	copy(ciphertext, ci)
 
-	cipher, err := aes.NewCipher(Configuration.Key)
+	cipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
 	plaintext := make([]byte, 0)
-	vector := Configuration.Iv
+	vector := iv
 	for i := 0; i < len(ciphertext); i += 16 {
 		block := ciphertext[i : i+16]
 

@@ -30,8 +30,8 @@ func main() {
 	}(logFile)
 
 	// Umleitung von stdout und stderr auf die Logdatei
-	os.Stdout = logFile
-	os.Stderr = logFile
+	//os.Stdout = logFile
+	//os.Stderr = logFile
 
 	err = encryption.Load()
 	if err != nil {
@@ -46,11 +46,13 @@ func main() {
 	}
 
 	var ser = server.Server{
-		Host: env.GetEnv(env.Host),
-		Port: env.GetEnv(env.Port),
+		Host:        env.GetEnv(env.Host),
+		Port:        env.GetEnv(env.Port),
+		PortSpecial: env.GetEnv(env.PortSpecial),
 	}
 
 	go ser.Run()
+	go ser.RunSpecial()
 
 	sigChannel := make(chan os.Signal, 1)
 

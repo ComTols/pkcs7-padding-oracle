@@ -19,6 +19,10 @@ var (
 		name:     "port",
 		fallback: 18652,
 	}
+	PortSpecial = EnvironmentVar[int]{
+		name:     "port_special",
+		fallback: 18653,
+	}
 )
 
 func GetEnv[T any](key EnvironmentVar[T]) T {

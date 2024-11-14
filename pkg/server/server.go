@@ -10,8 +10,9 @@ import (
 )
 
 type Server struct {
-	Host string
-	Port int
+	Host        string
+	Port        int
+	PortSpecial int
 }
 
 type Client struct {
@@ -43,11 +44,40 @@ func (server *Server) Run() {
 		client := &Client{
 			conn: conn,
 		}
-		go client.handleRequest()
+		go client.handleRequest(encryption.Configuration.Key, encryption.Configuration.Iv)
 	}
 }
 
-func (client *Client) handleRequest() {
+func (server *Server) RunSpecial() {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", server.Host, server.PortSpecial))
+	if err != nil {
+		fmt.Println("Error listening:", err.Error())
+		return
+	}
+	defer func(listener net.Listener) {
+		err := listener.Close()
+		if err != nil {
+			fmt.Println("Error closing listener:", err)
+		}
+	}(listener)
+	fmt.Printf("Server listing to %s:%d\n", server.Host, server.PortSpecial)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Printf("Connection accepted from %s\n", conn.RemoteAddr().String())
+
+		client := &Client{
+			conn: conn,
+		}
+		go client.handleRequest(encryption.Configuration.Key, make([]byte, 16))
+	}
+}
+
+func (client *Client) handleRequest(key, iv []byte) {
 	defer func(conn net.Conn) {
 		fmt.Println("Closing connection")
 		err := conn.Close()
@@ -56,12 +86,12 @@ func (client *Client) handleRequest() {
 		}
 	}(client.conn)
 
-	err := client.conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	err := client.conn.SetReadDeadline(time.Now().Add(100 * time.Second))
 	if err != nil {
 		fmt.Println("Error setting read deadline:", err.Error())
 		return
 	}
-	fmt.Printf("This connection will be open till %s\n", time.Now().Add(10*time.Second).String())
+	fmt.Printf("This connection will be open till %s\n", time.Now().Add(100*time.Second).String())
 
 	initialCipherBlock := make([]byte, 16)
 	err = client.read(initialCipherBlock)
@@ -102,7 +132,7 @@ func (client *Client) handleRequest() {
 		responses := make([]byte, blockCount)
 		correctBlocks := 0
 		for i := 0; i < int(blockCount); i++ {
-			plaintext, err := encryption.Decrypt(append(blocksToTest[i], initialCipherBlock...))
+			plaintext, err := encryption.Decrypt(append(blocksToTest[i], initialCipherBlock...), key, iv)
 			if err != nil {
 				fmt.Println("Error decrypting block:", err.Error())
 				return

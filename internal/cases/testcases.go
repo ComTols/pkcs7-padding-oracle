@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"os"
 	"pkcs7_padding_oracle/internal/env"
@@ -36,18 +35,18 @@ func ProvideTestcases() error {
 	testcases := make(map[string]any)
 	responses := make(map[string]any)
 
-	for _, plaintext := range plaintexts {
+	for index, plaintext := range plaintexts {
 		p := []byte(plaintext)
 		padding := 16 - (len(p) % 16)
 		for i := 0; i < padding; i++ {
 			p = append(p, byte(padding))
 		}
-		c, err := encryption.Encrypt(p)
+		c, err := encryption.Encrypt(p, encryption.Configuration.Key, encryption.Configuration.Iv)
 		if err != nil {
 			return err
 		}
 
-		id := uuid.New().String()
+		id := fmt.Sprintf("padding_oracle_%d", index)
 		testcases[id] = PaddingOracle{
 			Action: "padding_oracle",
 			Arguments: PaddingOracleArguments{
@@ -59,6 +58,32 @@ func ProvideTestcases() error {
 		}
 		responses[id] = Response{
 			Plaintext: base64.StdEncoding.EncodeToString(p),
+		}
+	}
+
+	for index, spec := range SpecialCases {
+		padding := 16 - (len(spec.Content) % 16)
+		for i := 0; i < padding; i++ {
+			spec.Content = append(spec.Content, byte(padding))
+		}
+
+		c, err := encryption.Encrypt(spec.Content, encryption.Configuration.Key, spec.IV)
+		if err != nil {
+			return err
+		}
+
+		id := fmt.Sprintf("padding_oracle_special_case_%d", index)
+		testcases[id] = PaddingOracle{
+			Action: "padding_oracle",
+			Arguments: PaddingOracleArguments{
+				Hostname:   env.GetEnv(env.Host),
+				Port:       env.GetEnv(env.PortSpecial),
+				Iv:         base64.StdEncoding.EncodeToString(spec.IV),
+				Ciphertext: base64.StdEncoding.EncodeToString(c),
+			},
+		}
+		responses[id] = Response{
+			Plaintext: base64.StdEncoding.EncodeToString(spec.Content),
 		}
 	}
 
